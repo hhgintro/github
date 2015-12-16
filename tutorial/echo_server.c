@@ -9,18 +9,18 @@
 #include <unistd.h>
 
 /* definition */
-#define MAX_CLIENT   10000
-#define DEFAULT_PORT 9006
-#define MAX_EVENTS   10000
-
+#define MAX_CLIENT      10000
+#define DEFAULT_PORT    9006
+#define MAX_EVENTS      10000
+#define MAX_PACKET_SIZE 1024
 
 /* global definition */
 int g_svr_sockfd;              /* global server socket fd */
 int g_svr_port;                /* global server port number */
 
 struct {
-         int  cli_sockfd;  /* client socket fds */
-         char cli_ip[20];              /* client connection ip */
+    int  cli_sockfd;        /* client socket fds */
+    char cli_ip[20];        /* client connection ip */
 } g_client[MAX_CLIENT];
 
 int g_epoll_fd;                /* epoll fd */
@@ -202,13 +202,13 @@ void userpool_send(char *buffer)
 
 void client_recv(int event_fd)
 {
-  char r_buffer[1024] = ""; /* for test.  packet size limit 1K */
+  char r_buffer[MAX_PACKET_SIZE] = ""; /* for test.  packet size limit 1K */
   int len;
   /* there need to be more precise code here */ 
   /* for example , packet check(protocol needed) , real recv size check , etc. */
 
   /* read from socket */
-  len = recv(event_fd,r_buffer,1024,0);
+  len = recv(event_fd,r_buffer,MAX_PACKET_SIZE,0);
   if( len < 0 || len == 0 )
   {
       userpool_delete(event_fd);

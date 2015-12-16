@@ -18,7 +18,7 @@ running: shared_memory [shmkey] [semkey]
 struct sembuf waitsem[] = { {0,-1,0} };
 struct sembuf notifysem[] = { {0,+1,0} };
 
-char *shm_data;
+char *shm_data;	//shared memory pointer
 int shmid, semid;
 
 
@@ -42,19 +42,20 @@ void fork_and_run()
     errquit("fork() fail");
   }
   else {
-    busy();
+    busy();	//excute child process
     exit(0);
   }
 }
 
+//access shared memory
 int access_shm()
 {
   int i;
   pid_t pid;
   struct timespec ts;
   ts.tv_sec = 0;
-  ts.tv_nsec = 100000000;
-  sprintf(shm_data, "%d", getpid());
+  ts.tv_nsec = 100000000;	//100ms
+  sprintf(shm_data, "%d", getpid());	//record self-pid
 
   for(i=0; i<1000; ++i);
 
@@ -69,6 +70,7 @@ int access_shm()
   return 0;
 }
 
+//approach to shared memory on each process
 int busy()
 {
   int i = 0;
@@ -77,7 +79,7 @@ int busy()
     access_shm();
     semop(semid, &notifysem[0], 1);
   }
-  shmdt(shm_data);
+  shmdt(shm_data);	//seperation shared memory
   return 0;
 }
 
@@ -93,6 +95,7 @@ int main(int argc, char *argv[])
   shmkey = atoi(argv[1]);
   semkey = atoi(argv[2]);
 
+  //create shared memory
   shmid = shmget(shmkey, 128, IPC_CREAT|0600);
   if(shmid < 0)
     errquit("shmget fail");
@@ -102,25 +105,29 @@ int main(int argc, char *argv[])
   if(shm_data == (char*)-1)
     errquit("shmat fail");
 
+  //create semaphore
   semid = semget(semkey, 1, IPC_CREAT | 0600);
   if(semid == -1)
     errquit("semget fail");
 
+  //semaphore default value = 1
+  //only one process approach on shared memory
   initsemval[0] = 1;
   semarg.array = initsemval;
 
   if(semctl(semid,0,SETALL,semarg) == -1)
     errquit("semctl fail");
 
+  //create child process
   fork_and_run();
   fork_and_run();
 
-  busy();
+  busy();	//approach shared memory by parent process
 
-  wait(NULL);
-  wait(NULL);
+  wait(NULL);	//wating child finished
+  wait(NULL);	//wating child finished
 
-  shmctl(shmid,IPC_RMID,0);
-  shmctl(semid,IPC_RMID,0);
+  shmctl(shmid,IPC_RMID,0);//delete shared memory
+  shmctl(semid,IPC_RMID,0);//delete semaphore
   return 0;
 }
